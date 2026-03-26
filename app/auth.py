@@ -3,13 +3,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from jose import JWTError, jwt
-from passlib.context import CryptoContext
+from passlib.context import CryptContext
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-pwd_context = CryptoContext(schemas=['bcrypt'], deprecated='auto')
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
 def hash_password(password:str)->str:
     try:

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/auth', tags=['Auth'])
 
-@router.post('/register', response_model=UserResponse, status=201)
+@router.post('/register', response_model=UserResponse, status_code=201)
 def register_user(
     user_data: UserRegister,
     db: Session = Depends(get_db)
@@ -25,7 +25,7 @@ def register_user(
         if existing_user:
             logger.warning(f"Registration failed: email already exists {user_data.email}")
             raise HTTPException(
-                status=400,
+                status_code=400,
                 detail = "Email already registered"
             )
         
@@ -48,18 +48,18 @@ def register_user(
         db.rollback()
         logger.exception("Database error during user registration")
         raise HTTPException(
-            status = 500,
+            status_code = 500,
             detail = "Database error during registration"
         ) from e
     except Exception as e:
         db.rollback()
         logger.exception("Unexpected error during user registration")
         raise HTTPException(
-            status=500,
+            status_code=500,
             detail = "Internal server error during registration"
         ) from e
 
-@router.post('/login', response_model=TokenResponse, status=200)
+@router.post('/login', response_model=TokenResponse, status_code=200)
 def login_user(
     user_data: UserLogin,
     db: Session = Depends(get_db)
@@ -71,21 +71,21 @@ def login_user(
         if user is None:
             logger.warning(f"Login failed: user not found for email={user_data.email}")
             raise HTTPException(
-                status=401,
+                status_code=401,
                 detail="Invalid email or password"
             )
         
         if not verify_password(user_data.password, user.hashed_password):
             logger.warning(f"Login failed: invalid password for email={user_data.email}")
             raise HTTPException(
-                status=401,
+                status_code=401,
                 detail = "Invalid email or password"
             )
         
         if not user.is_active:
             logger.warning(f"Login denied: inactive user user_id={user.id}")
             raise HTTPException(
-                status=403,
+                status_code=403,
                 detail = "Inactive user account"
             )
         
@@ -102,12 +102,12 @@ def login_user(
     except SQLAlchemyError as e:
         logger.exception("Database error during user login")
         raise HTTPException(
-            status=500,
+            status_code=500,
             detail="Database error during login"
         )
     except Exception as e:
         logger.exception("Unexpected error during user login")
         raise HTTPException(
-            status=500,
+            status_code=500,
             detail = "Internal server error during login"
         ) from e

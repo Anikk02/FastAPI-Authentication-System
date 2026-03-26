@@ -9,14 +9,14 @@ from app.schemas import UserResponse
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix='users',
+    prefix='/users',
     tags=['Users']
 )
 
 @router.get(
     '/me',
     response_model = UserResponse,
-    status=200
+    status_code=200
 )
 def read_current_user(
     current_user: User = Depends(get_current_user)
@@ -31,7 +31,7 @@ def read_current_user(
     except Exception as e:
         logger.exception("Unexpected error while fetching current user")
         raise HTTPException(
-            status = 500,
+            status_code = 500,
             detail = "Internal server error while fetching current user"
         ) from e
     
