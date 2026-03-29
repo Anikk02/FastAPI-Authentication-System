@@ -5,8 +5,8 @@ from fastapi import FastAPI
 from app.database import Base, engine
 from app.logger import setup_logging
 from app import models
-from routes.auth_routes import router as auth_router
-from routes.user_routes import router as user_router
+from app.routes.auth_routes import router as auth_router
+from app.routes.user_routes import router as user_router
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def create_application()->FastAPI:
 
         app.include_router(auth_router)
         app.include_router(user_router)
-        logging.info("API routers registered successfully")
+        logger.info("API routers registered successfully")
 
         @app.get('/')
         def root()->dict[str,str]:

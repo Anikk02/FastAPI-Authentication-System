@@ -7,11 +7,11 @@ LOG_FILE = os.path.join(LOG_DIR, 'app.log')
 os.makedirs(LOG_DIR, exist_ok=True)
 
 def setup_logging():
-    logger = logging.getLogger('app')
-    logger.setLevel(logging.INFO)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
 
-    if logger.handlers:
-        return logger
+    if root_logger.handlers:
+        return root_logger
     
     #formatter
     formatter = logging.Formatter(
@@ -24,7 +24,7 @@ def setup_logging():
     file_handler = RotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=3)
     file_handler.setFormatter(formatter)
 
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
 
-    return logger
+    return root_logger

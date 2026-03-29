@@ -13,17 +13,23 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/auth', tags=['Auth'])
 
+def mask_email(email:str)->str:
+    name, domain = email.split('@')
+    if len(name)<=1:
+        return f"@" + domain
+    return f"{name[0]}***@" + domain
+
 @router.post('/register', response_model=UserResponse, status_code=201)
 def register_user(
     user_data: UserRegister,
     db: Session = Depends(get_db)
 )->User:
     try:
-        logger.info(f"Registration attempt for email={user_data.email}")
+        logger.info(f"Registration attempt: {mask_email(user_data.email)}")
 
         existing_user = db.query(User).filter(User.email==user_data.email).first()
         if existing_user:
-            logger.warning(f"Registration failed: email already exists {user_data.email}")
+            logger.warning(f"Registration failed: email already exists {mask_email(user_data.email)}")
             raise HTTPException(
                 status_code=400,
                 detail = "Email already registered"
@@ -31,15 +37,15 @@ def register_user(
         
         new_user = User(
             name = user_data.name,
-            email = user_data.email(),
-            hash_password=hash_password(user_data.password)
+            email = user_data.email,
+            hashed_password=hash_password(user_data.password)
         )
 
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
 
-        logger.info(f"User registered successfully: user_id={new_user.id}")
+        logger.info(f"User registered successfully: user_id={new_user.id}, email={mask_email(user_data.email)}")
         return new_user
     except HTTPException:
         raise
@@ -65,18 +71,18 @@ def login_user(
     db: Session = Depends(get_db)
 )->TokenResponse:
     try:
-        logger.info(f"Login attempt for email={user_data.email}")
+        logger.info(f"Login attempt for email={mask_email(user_data.email)}")
 
         user = db.query(User).filter(User.email == user_data.email).first()
         if user is None:
-            logger.warning(f"Login failed: user not found for email={user_data.email}")
+            logger.warning(f"Login failed: user not found for email={mask_email(user_data.email)}")
             raise HTTPException(
                 status_code=401,
                 detail="Invalid email or password"
             )
         
         if not verify_password(user_data.password, user.hashed_password):
-            logger.warning(f"Login failed: invalid password for email={user_data.email}")
+            logger.warning(f"Login failed: invalid password for email={mask_email(user_data.email)}")
             raise HTTPException(
                 status_code=401,
                 detail = "Invalid email or password"
