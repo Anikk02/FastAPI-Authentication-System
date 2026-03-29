@@ -110,7 +110,7 @@ def login_user(
         raise HTTPException(
             status_code=500,
             detail="Database error during login"
-        )
+        ) from e
     except Exception as e:
         logger.exception("Unexpected error during user login")
         raise HTTPException(
