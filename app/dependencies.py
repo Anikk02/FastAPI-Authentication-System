@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models import User
 
 logger = logging.getLogger(__name__)
-security = HTTPBearer
+security = HTTPBearer()
 
 def get_current_user(
         credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -22,28 +22,28 @@ def get_current_user(
         if payload is None:
             logger.warning("Authentication failed: invalid or expired token")
             raise HTTPException(
-                status= 401,
+                status_code= status.HTTP_401_UNAUTHORIZED,
                 detail ="Invalid or expired token"
             )
         user_id = payload.get('user_id')
         if user_id is None:
             logger.warning("Authentication failed: user_id missing in token payload")
             raise HTTPException(
-                status=401,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload"
             )
         user = db.query(User).filter(User.id==user_id).first()
         if user is None:
             logger.warning(f"Authentication failed: user not found for user_id={user_id}")
             raise HTTPException(
-                status = 401,
+                status_code = status.HTTP_401_UNAUTHORIZED,
                 detail="User not found"
             )
         
         if not user.is_active:
             logger.warning("Authentication failed: inactive user user_id={user_id}")
             raise HTTPException(
-                status=403,
+                status_code=status.HTTP_403_FORBIDDEN,
                 detail= "Inactive user accound"
             )
         
@@ -55,6 +55,6 @@ def get_current_user(
     except Exception as e:
         logger.exception("Unexpected error while authenticating current user")
         raise HTTPException(
-            status=501,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail = "Internal server error during authentication"
         ) from e
