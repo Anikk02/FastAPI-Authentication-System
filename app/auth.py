@@ -10,15 +10,14 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt_sha256"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
     try:
-        prehashed_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
-        final_hash = pwd_context.hash(prehashed_password)
+        hashed_password = pwd_context.hash(password)
         logger.info("Password hashed successfully")
-        return final_hash
+        return hashed_password
     except Exception as e:
         logger.exception("Failed to hash password")
         raise RuntimeError(f"Password hashing error: {e}") from e
@@ -26,8 +25,7 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        prehashed_password = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
-        is_valid = pwd_context.verify(prehashed_password, hashed_password)
+        is_valid = pwd_context.verify(plain_password, hashed_password)
 
         if is_valid:
             logger.info("Password verification successful")
