@@ -32,9 +32,9 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, value:str)->str:
-        if not value.startswith(('sqlite://','postgresql://','mysql://')):
+        if not value.startswith(('sqlite://','postgresql+psycopg2://','mysql://')):
             raise ValueError(
-                'DATABASE_URL must start with sqlite://, postgresql://, or mysql://'
+                'DATABASE_URL must start with sqlite://, postgresql+psycopg2://, or mysql://'
             )
         return value
     
