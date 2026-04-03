@@ -15,6 +15,16 @@ try:
     if settings.DATABASE_URL.startswith("sqlite"):
         engine_kwargs["connect_args"] = {"check_same_thread": False}
 
+    else:
+        #increased app-side connection management from (size:5, 10 overflow) which was causing pool exhaustion + queueing
+        #Also cuz default SQLAlchemy QueuePool configuration could not supply enough
+        #DB connections, causing timeouts, internal server error and higher failure rate.
+        engine_kwargs.update({
+            'pool_size':20, #keep 20 persistent connections ready
+            'max_overflow':30, #allow 30 extra temporary connection
+            'pool_timeout':30, #wait up to 30s for a connection
+            'pool_recycle':1800 #refresh older connections periodically
+        })
     engine = create_engine(
         settings.DATABASE_URL,
         **engine_kwargs
