@@ -103,16 +103,55 @@ Shows interactions between FastAPI, Redis, and PostgreSQL with JWT-based authent
 ## 📁 Project Structure
 
 ```
-app/
- ├── main.py
- ├── models/
- ├── schemas/
- ├── routes/
- ├── core/
- │    └── redis.py
- ├── dependencies.py
- ├── auth.py
- └── database.py
+FastAPI-Authentication-System/
+│
+├── .github/
+│ └── workflows/
+│ └── ci.yml # CI/CD pipeline (GitHub Actions)
+│
+├── app/
+│ ├── core/
+│ │ └── redis.py # Redis client setup
+│ │
+│ ├── routes/
+│ │ ├── auth_routes.py # Authentication endpoints (login/register)
+│ │ ├── user_routes.py # User endpoints (/users/me)
+│ │ ├── redis_routes.py # Redis test/debug endpoints
+│ │ └── init.py
+│ │
+│ ├── init.py
+│ ├── auth.py # JWT + password hashing (bcrypt)
+│ ├── config.py # Environment configuration
+│ ├── database.py # DB connection & session
+│ ├── dependencies.py # Auth dependency (get_current_user)
+│ ├── logger.py # Logging setup
+│ ├── main.py # FastAPI entry point
+│ ├── models.py # SQLAlchemy models
+│ └── schemas.py # Pydantic schemas
+│
+├── diagrams/ # System design diagrams
+│ ├── architectural_design.png
+│ ├── component.png
+│ ├── sequence_login.png
+│ ├── sequence_users_me.png
+│ ├── state_auth.png
+│ ├── deployment.png
+│ └── data_flow.png
+│
+├── performance/ # Load testing & benchmarking
+│ ├── screenshots/ # Locust UI screenshots
+│ ├── results/ # Metrics per phase
+│ └── notes/ # Observations & insights
+│
+├── tests/ # Unit & integration tests
+├── logs/ # Application logs
+│
+├── requirements.txt # Dependencies
+├── README.md # Project documentation
+├── LICENSE
+├── .gitignore
+├── test_auth.db # SQLite test DB (local/testing)
+└── .test_auth.db # Temporary test DB (CI)
 ```
 
 ---
