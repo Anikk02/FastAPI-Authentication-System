@@ -1,4 +1,5 @@
 import logging
+from redis.exceptions import RedisError
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -38,13 +39,16 @@ def get_current_user(
 
         cache_key = f"user:{user_id}"
 
-        # 🔥 1. Try Redis first
-        cached_user = redis_client.get(cache_key)
-        if cached_user:
-            logger.info(f"Cache HIT user_id={user_id}")
-            return UserResponse.model_validate_json(cached_user)
+        # 1. Try Redis first
+        try:
+            cached_user = redis_client.get(cache_key)
+            if cached_user:
+                logger.info(f"Cache HIT user_id={user_id}")
+                return UserResponse.model_validate_json(cached_user)
+        except RedisError:
+            logger.warning("Redis unavailable → skipping cache GET")
 
-        # 🐢 2. Fallback to DB
+        # 2. Fallback to DB
         logger.info(f"Cache MISS user_id={user_id}")
         user = db.query(User).filter(User.id == user_id).first()
 
@@ -62,15 +66,18 @@ def get_current_user(
                 detail="Inactive user account"
             )
 
-        # 🔥 3. Convert to schema
+        # 3. Convert to schema
         user_response = UserResponse.model_validate(user)
 
-        # 🔥 4. Store in Redis (TTL = 5 minutes)
-        redis_client.setex(
-            cache_key,
-            300,
-            user_response.model_dump_json()
-        )
+        # 4. Store in Redis (TTL = 5 minutes)
+        try:
+            redis_client.setex(
+                cache_key,
+                300,
+                user_response.model_dump_json()
+            )
+        except RedisError:
+            logger.warning("Redis unavailable → skipping cache SET")
 
         return user_response
 
