@@ -7,6 +7,7 @@ from app.logger import setup_logging
 from app import models
 from app.routes.auth_routes import router as auth_router
 from app.routes.user_routes import router as user_router
+from app.routes.redis_routes import router as redis_router
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ def create_application()->FastAPI:
 
         app.include_router(auth_router)
         app.include_router(user_router)
+        app.include_router(redis_router)
         logger.info("API routers registered successfully")
 
         @app.get('/')
