@@ -211,4 +211,3 @@ auth.db
 .test_auth.db
 test_auth.db
 logs/
-performance/
