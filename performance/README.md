@@ -191,7 +191,7 @@ This testing process guided:
 
 **Aniket Paswan**
 
-Backend & AI Enthusiast focused on building scalable systems.
+Aspiring Backend & AI/ML Engineer
 
 ---
 
