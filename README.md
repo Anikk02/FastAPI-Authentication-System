@@ -50,6 +50,10 @@ Client → FastAPI → Redis (cache) → PostgreSQL
 
 ---
 
+## Architectural Design
+Shows interactions between FastAPI, Redis, and PostgreSQL with JWT-based authentication.
+![alt text](architectural_design.png)
+
 ## 🔥 Performance Journey
 
 ### Phase 1: Initial System

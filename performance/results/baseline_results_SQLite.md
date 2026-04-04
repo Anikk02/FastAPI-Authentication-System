@@ -77,3 +77,6 @@ Results may vary with:
 ## 🚀 Conclusion
 
 The system is functionally correct but not suitable for high-concurrency workloads using SQLite. Performance degradation is caused by database contention, request queue buildup, and CPU-intensive authentication logic. This motivates migration to PostgreSQL and further scalability improvements.
+
+----------------------------------------------
+
