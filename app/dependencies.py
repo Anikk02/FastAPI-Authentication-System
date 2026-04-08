@@ -3,21 +3,24 @@ from redis.exceptions import RedisError
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
+#from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.auth import decode_access_token
 from app.database import get_db
 from app.models import User
 from app.core.redis import redis_client
+import redis.asyncio as redis
 from app.schemas import UserResponse
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 
-def get_current_user(
+async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> UserResponse:
 
     try:
@@ -41,7 +44,7 @@ def get_current_user(
 
         # 1. Try Redis first
         try:
-            cached_user = redis_client.get(cache_key)
+            cached_user = await redis_client.get(cache_key)
             if cached_user:
                 logger.info(f"Cache HIT user_id={user_id}")
                 return UserResponse.model_validate_json(cached_user)
@@ -50,7 +53,10 @@ def get_current_user(
 
         # 2. Fallback to DB
         logger.info(f"Cache MISS user_id={user_id}")
-        user = db.query(User).filter(User.id == user_id).first()
+        result = await db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
 
         if user is None:
             logger.warning(f"User not found user_id={user_id}")
@@ -71,7 +77,7 @@ def get_current_user(
 
         # 4. Store in Redis (TTL = 5 minutes)
         try:
-            redis_client.setex(
+            await redis_client.setex(
                 cache_key,
                 300,
                 user_response.model_dump_json()

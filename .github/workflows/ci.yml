@@ -45,6 +45,6 @@ jobs:
           SECRET_KEY: ci_test_secret_key_12345678901234567890
           ALGORITHM: HS256
           ACCESS_TOKEN_EXPIRE_MINUTES: 30
-          DATABASE_URL: sqlite:///./test_ci.db
+          DATABASE_URL: sqlite:+aiosqlite///./test_ci.db
         run: |
           python -m pytest -v -s

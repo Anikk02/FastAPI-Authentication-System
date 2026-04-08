@@ -18,9 +18,9 @@ router = APIRouter(
     response_model = UserResponse,
     status_code=200
 )
-def read_current_user(
-    current_user: User = Depends(get_current_user)
-)->User:
+async def read_current_user(
+    current_user: UserResponse = Depends(get_current_user)
+)->UserResponse:
     try:
         logger.info(f"/users/me accessed by user_id={current_user.id}")
         return current_user

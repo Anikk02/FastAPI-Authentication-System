@@ -1,8 +1,11 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+#from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.auth import create_access_token, hash_password, verify_password
 from app.database import get_db
@@ -20,14 +23,17 @@ def mask_email(email:str)->str:
     return f"{name[0]}***@" + domain
 
 @router.post('/register', response_model=UserResponse, status_code=201)
-def register_user(
+async def register_user(
     user_data: UserRegister,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 )->User:
     try:
         logger.info(f"Registration attempt: {mask_email(user_data.email)}")
 
-        existing_user = db.query(User).filter(User.email==user_data.email).first()
+        result = await db.execute(
+            select(User).where(User.email == user_data.email)
+        )
+        existing_user = result.scalar_one_or_none()
         if existing_user:
             logger.warning(f"Registration failed: email already exists {mask_email(user_data.email)}")
             raise HTTPException(
@@ -38,12 +44,14 @@ def register_user(
         new_user = User(
             name = user_data.name,
             email = user_data.email,
-            hashed_password=hash_password(user_data.password)
+            hashed_password= await run_in_threadpool(
+                hash_password, user_data.password
+            )
         )
 
         db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
+        await db.commit()
+        await db.refresh(new_user)
 
         logger.info(f"User registered successfully: user_id={new_user.id}, email={mask_email(user_data.email)}")
         return new_user
@@ -51,14 +59,14 @@ def register_user(
         raise
 
     except SQLAlchemyError as e:
-        db.rollback()
+        await db.rollback()
         logger.exception("Database error during user registration")
         raise HTTPException(
             status_code = 500,
             detail = "Database error during registration"
         ) from e
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.exception("Unexpected error during user registration")
         raise HTTPException(
             status_code=500,
@@ -66,14 +74,17 @@ def register_user(
         ) from e
 
 @router.post('/login', response_model=TokenResponse, status_code=200)
-def login_user(
+async def login_user(
     user_data: UserLogin,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 )->TokenResponse:
     try:
         logger.info(f"Login attempt for email={mask_email(user_data.email)}")
 
-        user = db.query(User).filter(User.email == user_data.email).first()
+        result = await db.execute(
+            select(User).where(User.email == user_data.email)
+        )
+        user = result.scalar_one_or_none()
         if user is None:
             logger.warning(f"Login failed: user not found for email={mask_email(user_data.email)}")
             raise HTTPException(
@@ -81,7 +92,12 @@ def login_user(
                 detail="Invalid email or password"
             )
         
-        if not verify_password(user_data.password, user.hashed_password):
+        is_valid = await run_in_threadpool(
+            verify_password,
+            user_data.password,
+            user.hashed_password
+        )
+        if not is_valid:
             logger.warning(f"Login failed: invalid password for email={mask_email(user_data.email)}")
             raise HTTPException(
                 status_code=401,

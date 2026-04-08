@@ -1,5 +1,5 @@
 import logging
-from logging.handlers import RotatingFileHandler
+from concurrent_log_handler import ConcurrentRotatingFileHandler
 import os
 
 LOG_DIR = 'logs'
@@ -8,7 +8,7 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 def setup_logging():
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.WARNING)
 
     if root_logger.handlers:
         return root_logger
@@ -21,7 +21,7 @@ def setup_logging():
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
 
-    file_handler = RotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=3)
+    file_handler = ConcurrentRotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=3)
     file_handler.setFormatter(formatter)
 
     root_logger.addHandler(console_handler)

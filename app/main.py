@@ -19,11 +19,20 @@ def create_application()->FastAPI:
         app = FastAPI(
             title="FastAPI Auth System",
             description="A modular authentication system with JWT, logging, and protected routes",
-            version='1.0.0'
+            version='1.0.1'
         )
 
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables created successfully")
+        #Async DB initialization
+        @app.on_event('startup')
+        async def on_startup():
+            try:
+                logger.info("Initializing database (async)")
+                async with engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.create_all)
+                logger.info("Database tables created successfully")
+            except Exception as e:
+                logger.exception("Database initialization falied")
+                raise RuntimeError(f"Database initialization error: {e}") from e
 
         app.include_router(auth_router)
         app.include_router(user_router)
@@ -31,7 +40,7 @@ def create_application()->FastAPI:
         logger.info("API routers registered successfully")
 
         @app.get('/')
-        def root()->dict[str,str]:
+        async def root()->dict[str,str]:
             logger.info("Root endpoint accessed")
             return {'message': "FastAPI Auth System is running"}
         logger.info("FastAPI application setup completed successfully")

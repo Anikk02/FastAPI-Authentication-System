@@ -1,6 +1,7 @@
 import logging
 
-from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+#from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -12,6 +13,11 @@ logger = logging.getLogger(__name__)
 try:
     engine_kwargs = {}
 
+    #Convert DB Url to async
+    '''DATABASE_URL = settings.DATABASE_URL.replace(
+        'postgresql+psycopg2://','postgresql+asyncpg://'
+    )'''
+
     if settings.DATABASE_URL.startswith("sqlite"):
         engine_kwargs["connect_args"] = {"check_same_thread": False}
 
@@ -20,25 +26,28 @@ try:
         #Also cuz default SQLAlchemy QueuePool configuration could not supply enough
         #DB connections, causing timeouts, internal server error and higher failure rate.
         engine_kwargs.update({
-            'pool_size':20, #keep 20 persistent connections ready
-            'max_overflow':30, #allow 30 extra temporary connection
+            'pool_size':20, #keep 40 persistent connections ready
+            'max_overflow':30, #allow 80 extra temporary connection
             'pool_timeout':30, #wait up to 30s for a connection
-            'pool_recycle':1800 #refresh older connections periodically
+            'pool_recycle':1800, #refresh older connections periodically
+            'pool_pre_ping': True #prevents stale connections
+
         })
-    engine = create_engine(
+    engine = create_async_engine(
         settings.DATABASE_URL,
+        echo = False,
         **engine_kwargs
     )
 
-    SessionLocal = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine
+    AsyncSessionLocal = sessionmaker(
+        bind = engine,
+        class_ = AsyncSession,
+        expire_on_commit=False
     )
 
     Base = declarative_base()
 
-    logger.info("Database engine and sessionmaker initialized successfully")
+    logger.debug("Async database engine and sessionmaker initialized successfully")
 
 except SQLAlchemyError as e:
     logger.exception("Failed to initialize database engine")
@@ -49,20 +58,19 @@ except Exception as e:
     raise RuntimeError(f"Unexpected database setup error: {e}") from e
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        logger.info("Database session opened")
-        yield db
+async def get_db():
+    async with AsyncSessionLocal() as db:
+        try:
+            logger.debug("Async database session opened")
+            yield db
         
-    except SQLAlchemyError as e:
-        logger.exception("Database session error occurred")
-        raise RuntimeError(f"Database session error: {e}") from e
+        except SQLAlchemyError as e:
+            logger.exception("Database session error occurred")
+            raise RuntimeError(f"Database session error: {e}") from e
     
-    except Exception as e:
-        logger.exception("Unexpected error during database session")
-        raise RuntimeError(f"Unexpected database session error: {e}") from e
+        except Exception as e:
+            logger.exception("Unexpected error during database session")
+            raise
     
-    finally:
-        db.close()
-        logger.info("Database session closed")
+        finally:
+            logger.debug("Database session closed")
