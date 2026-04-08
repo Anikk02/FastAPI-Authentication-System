@@ -12,7 +12,7 @@ from app.database import Base, get_db
 from app.main import app
 from app import models
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_auth.db"
+SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./test_auth.db"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
