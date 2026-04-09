@@ -8,6 +8,7 @@ bcrypt==4.0.1
 certifi==2026.2.25
 click==8.3.1
 colorama==0.4.6
+concurrent-log-handler==0.9.29
 dnspython==2.8.0
 ecdsa==0.19.1
 email-validator==2.3.0
@@ -22,6 +23,7 @@ jose==1.0.0
 packaging==26.0
 passlib==1.7.4
 pluggy==1.6.0
+portalocker==3.2.0
 psycopg2-binary==2.9.11
 pyasn1==0.6.3
 pydantic==2.12.5
@@ -32,6 +34,7 @@ pytest==9.0.2
 python-dotenv==1.2.2
 python-jose==3.5.0
 python-multipart==0.0.22
+pywin32==311
 redis==7.4.0
 rsa==4.9.1
 six==1.17.0
