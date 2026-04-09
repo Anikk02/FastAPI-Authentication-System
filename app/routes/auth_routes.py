@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.auth import create_access_token, hash_password, verify_password
-from app.database import get_db
+from app.database import get_db, safe_execute
 from app.models import User
 from app.schemas import TokenResponse, UserLogin, UserRegister, UserResponse
 
@@ -30,7 +30,8 @@ async def register_user(
     try:
         logger.info(f"Registration attempt: {mask_email(user_data.email)}")
 
-        result = await db.execute(
+        result = await safe_execute(
+            db,
             select(User).where(User.email == user_data.email)
         )
         existing_user = result.scalar_one_or_none()
@@ -50,7 +51,7 @@ async def register_user(
         )
 
         db.add(new_user)
-        await db.commit()
+        await db.flush()
         await db.refresh(new_user)
 
         logger.info(f"User registered successfully: user_id={new_user.id}, email={mask_email(user_data.email)}")
@@ -59,14 +60,12 @@ async def register_user(
         raise
 
     except SQLAlchemyError as e:
-        await db.rollback()
         logger.exception("Database error during user registration")
         raise HTTPException(
             status_code = 500,
             detail = "Database error during registration"
         ) from e
     except Exception as e:
-        await db.rollback()
         logger.exception("Unexpected error during user registration")
         raise HTTPException(
             status_code=500,
@@ -81,7 +80,8 @@ async def login_user(
     try:
         logger.info(f"Login attempt for email={mask_email(user_data.email)}")
 
-        result = await db.execute(
+        result = await safe_execute(
+            db,
             select(User).where(User.email == user_data.email)
         )
         user = result.scalar_one_or_none()
