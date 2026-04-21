@@ -1,47 +1,52 @@
 import os
-import sys 
+import sys
+import asyncio
+import pytest
 
-import pytest 
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    AsyncSession
+)
 from sqlalchemy.orm import sessionmaker
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),"..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.database import Base, get_db
 from app.main import app
-from app import models
 
+# ✅ Async test DB
 SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./test_auth.db"
 
-engine = create_engine(
+engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={'check_same_thread':False}
+    connect_args={"check_same_thread": False},
 )
 
 TestingSessionLocal = sessionmaker(
-    autocommit = False,
-    autoflush = False,
-    bind = engine
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )
 
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# ✅ Override dependency
+async def override_get_db():
+    async with TestingSessionLocal() as session:
+        yield session
 
-@pytest.fixture(scope='function')
-def client():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+# ✅ Create & drop tables async
+@pytest.fixture(scope="function")
+async def client():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
 
     app.dependency_overrides[get_db] = override_get_db
 
-    with TestClient(app) as test_client:
-        yield test_client
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
 
     app.dependency_overrides.clear()
 
-    Base.metadata.drop_all(bind = engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)

@@ -1,4 +1,5 @@
 import logging
+import hashlib
 from redis.exceptions import RedisError
 
 from fastapi import Depends, HTTPException, status
@@ -7,9 +8,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.auth import decode_access_token
+from app.core.security import decode_access_token
 from app.database import get_db
-from app.models import User
+from app.models.user import User
 from app.core.redis import redis_client
 import redis.asyncio as redis
 from app.schemas import UserResponse
@@ -32,6 +33,14 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token"
             )
+        
+        # check token type
+        if payload.get("type") != "access":
+            raise HTTPException(
+                status_code = status.HTTP_401_UNAUTHORIZED,
+                detail = "Invalid token type"
+
+            )
 
         user_id = payload.get("user_id")
         if user_id is None:
@@ -39,6 +48,22 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload"
             )
+        
+        # Step 1: SESSION VALIDATION
+        hashed_token = hashlib.sha256(token.encode()).hexdigest()
+        session_key = f"session:{hashed_token}"
+
+        try:
+            session_exists = await redis_client.get(session_key)
+            if not session_exists:
+                raise HTTPException(
+                    status_code = status.HTTP_401_UNAUTHORIZED,
+                    detail = "Session expired or revoked"
+                )
+        except RedisError:
+            logger.warning("Redis unavailable -> skipping session check")
+
+        # Step 2: USER CACHE
 
         cache_key = f"user:{user_id}"
 

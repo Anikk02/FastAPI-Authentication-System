@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app.database import Base, engine
 from app.logger import setup_logging
-from app import models
+from app.models import user, session_model
 from app.routes.auth_routes import router as auth_router
 from app.routes.user_routes import router as user_router
 from app.routes.redis_routes import router as redis_router

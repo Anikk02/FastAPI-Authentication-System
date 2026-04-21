@@ -1,12 +1,14 @@
+import hashlib 
 import logging
-from datetime import datetime, timedelta, timezone
 from typing import Any
-import hashlib
+from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.config import settings
+
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ def create_access_token(data: dict[str, Any]) -> str:
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-        to_encode.update({"exp": expire})
+        to_encode.update({"exp": expire, 'type':'access'})
 
         encoded_jwt = jwt.encode(
             to_encode,
@@ -66,6 +68,11 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
+
+        if payload.get('type') != "access":
+            logger.warning("Invalid token type for access")
+            return None
+        
         logger.info("Access token decoded successfully")
         return payload
     except JWTError:
@@ -74,3 +81,31 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
     except Exception as e:
         logger.exception("Unexpected error while decoding access token")
         raise RuntimeError(f"Token decode error: {e}") from e
+
+def create_refresh_token(data : dict)-> str:
+    try:
+        to_encode = data.copy()
+
+        expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+
+        to_encode.update({'exp': expire, 'type':'refresh'})
+
+        encoded_jwt = jwt.encode(
+            to_encode,
+            settings.SECRET_KEY,
+            algorithm=settings.ALGORITHM
+        )
+
+        logger.info("Refresh token created successfully")
+        return encoded_jwt
+    except Exception as e:
+        logger.exception("Failed to create refresh token")
+        raise RuntimeError(f"Refresh token error: {e}") from e
+    
+
+def hash_token(token: str) -> str:
+    try:
+        return hashlib.sha256(token.encode()).hexdigest()
+    except Exception as e:
+        logger.exception("Failed to hash token")
+        raise RuntimeError(f"Token hashing error: {e}") from e

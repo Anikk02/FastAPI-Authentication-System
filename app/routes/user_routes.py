@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.dependencies import get_current_user
-from app.models import User
+from app.models.user import User
 from app.schemas import UserResponse
 
 logger = logging.getLogger(__name__)

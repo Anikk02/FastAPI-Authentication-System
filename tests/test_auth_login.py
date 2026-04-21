@@ -1,13 +1,17 @@
-def test_login_success(client):
+import pytest
+
+@pytest.mark.asyncio
+async def test_login_success(client):
     register_payload = {
         "name": "Aniket",
         "email": "aniket@example.com",
         "password": "strongpass123"
     }
 
-    client.post("/auth/register", json=register_payload)
+    # ✅ await added
+    await client.post("/auth/register", json=register_payload)
 
-    response = client.post(
+    response = await client.post(
         "/auth/login",
         json={
             "email": "aniket@example.com",
@@ -21,16 +25,18 @@ def test_login_success(client):
     assert data["token_type"] == "bearer"
 
 
-def test_login_wrong_password(client):
+@pytest.mark.asyncio
+async def test_login_wrong_password(client):
     register_payload = {
         "name": "Aniket",
         "email": "aniket@example.com",
         "password": "strongpass123"
     }
 
-    client.post("/auth/register", json=register_payload)
+    # ✅ await added
+    await client.post("/auth/register", json=register_payload)
 
-    response = client.post(
+    response = await client.post(
         "/auth/login",
         json={
             "email": "aniket@example.com",

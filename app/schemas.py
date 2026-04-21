@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -29,6 +30,19 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6, max_length=128)
 
+# Profile Schemas
+
+class UserProfileBase(BaseModel):
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    phone_number: Optional[str] = Field(None, max_length=20)
+    address: Optional[str] = Field(None, max_length=255)
+
+class UserProfileResponse(UserProfileBase):
+    model_config = {
+        "from_attributes": True
+    }
+
 class UserResponse(BaseModel):
     id: int
     name: str
@@ -37,15 +51,22 @@ class UserResponse(BaseModel):
     role: str
     created_at: datetime
 
+    profile: Optional[UserProfileResponse] = None
+
     model_config = {
         'from_attributes':True
     }
 
+# TOKEN SCHEMAS
 class TokenResponse(BaseModel):
     access_token: str
-    token_type: str
+    refresh_token: str
+    token_type: str = 'bearer'
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 class TokenData(BaseModel):
-    user_id:int | None = None
+    user_id: Optional[int] = None
 
 logger.info("Pydantic schemas loaded successfully")
