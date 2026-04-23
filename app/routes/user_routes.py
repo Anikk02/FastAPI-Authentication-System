@@ -9,8 +9,8 @@ from app.schemas import UserResponse
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix='/users',
-    tags=['Users']
+    prefix='/auth',
+    tags=['Auth']
 )
 
 @router.get(
@@ -19,10 +19,10 @@ router = APIRouter(
     status_code=200
 )
 async def read_current_user(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 )->UserResponse:
     try:
-        logger.info(f"/users/me accessed by user_id={current_user.id}")
+        logger.info(f"/auth/me accessed by user_id={current_user.id}")
         return current_user
     
     except HTTPException:

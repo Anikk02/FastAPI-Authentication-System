@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware  # ✅ ADD THIS
 
 from app.database import Base, engine
 from app.logger import setup_logging
@@ -12,7 +13,7 @@ from app.routes.redis_routes import router as redis_router
 setup_logging()
 logger = logging.getLogger(__name__)
 
-def create_application()->FastAPI:
+def create_application() -> FastAPI:
     try:
         logger.info("Starting FastAPI application setup")
 
@@ -22,7 +23,16 @@ def create_application()->FastAPI:
             version='1.0.1'
         )
 
-        #Async DB initialization
+        # CORS
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["http://localhost:3000"],  # frontend URL
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+        # Async DB initialization
         @app.on_event('startup')
         async def on_startup():
             try:
@@ -31,7 +41,7 @@ def create_application()->FastAPI:
                     await conn.run_sync(Base.metadata.create_all)
                 logger.info("Database tables created successfully")
             except Exception as e:
-                logger.exception("Database initialization falied")
+                logger.exception("Database initialization failed")
                 raise RuntimeError(f"Database initialization error: {e}") from e
 
         app.include_router(auth_router)
@@ -40,15 +50,16 @@ def create_application()->FastAPI:
         logger.info("API routers registered successfully")
 
         @app.get('/')
-        async def root()->dict[str,str]:
+        async def root() -> dict[str, str]:
             logger.info("Root endpoint accessed")
             return {'message': "FastAPI Auth System is running"}
+
         logger.info("FastAPI application setup completed successfully")
         return app
-    
+
     except Exception as e:
         logger.exception("Failed to create FastAPI application")
         raise RuntimeError(f"Application startup failed: {e}") from e
-    
+
 
 app = create_application()

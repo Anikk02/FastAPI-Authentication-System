@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db, safe_execute
-from app.core.redis import redis_client
+from app.core.redis import redis_client, redis_available
 from redis.exceptions import RedisError
 from app.config import settings
 from app.schemas import RefreshTokenRequest
@@ -136,33 +136,34 @@ async def login_user(
         hashed_refresh_token = hash_token(refresh_token)
 
         # Store in Redis
-        try:
-            await redis_client.setex(
-            f"session:{hashed_access}",
-            ACCESS_TOKEN_EXPIRES_SECONDS,
-            user.id
-            )
-        except RedisError:
-            logger.warning("Redis unavailable -> skipping access session storage")
+        if redis_available:
+            try:
+                await redis_client.setex(
+                f"session:{hashed_access}",
+                ACCESS_TOKEN_EXPIRES_SECONDS,
+                user.id
+                )
+            except RedisError:
+                logger.warning("Redis unavailable -> skipping access session storage")
 
-        try:
-            await redis_client.setex(
-            f"refresh:{hashed_refresh_token}",
-            7 * 24 * 60 * 60, # 7 days
-            user.id
-            )
-        except RedisError:
-            logger.warning("Redis unavailable -> skipping refresh storage")
+            try:
+                await redis_client.setex(
+                f"refresh:{hashed_refresh_token}",
+                7 * 24 * 60 * 60, # 7 days
+                user.id
+                )
+            except RedisError:
+                logger.warning("Redis unavailable -> skipping refresh storage")
         
-        # link access -> refresh
-        try:
-            await redis_client.setex(
-            f"access_to_refresh:{hashed_access}",
-            ACCESS_TOKEN_EXPIRES_SECONDS,
-            hashed_refresh_token
-            )
-        except RedisError:
-            logger.warning("Redis unavailable -> skipping link access")
+            # link access -> refresh
+            try:
+                await redis_client.setex(
+                f"access_to_refresh:{hashed_access}",
+                ACCESS_TOKEN_EXPIRES_SECONDS,
+                hashed_refresh_token
+                )
+            except RedisError:
+                logger.warning("Redis unavailable -> skipping link access")
 
         # Store session in DB
         session = Session(
@@ -217,11 +218,12 @@ async def refresh_token(
         hashed_refresh = hash_token(token)
 
         # Check Redis
-        try:
-            stored_user = await redis_client.get(f"refresh:{hashed_refresh}")
-        except RedisError:
-            logger.warning("Redis unavailable -> skipping refresh validation")
-            stored_user = None
+        if redis_available:
+            try:
+                stored_user = await redis_client.get(f"refresh:{hashed_refresh}")
+            except RedisError:
+                logger.warning("Redis unavailable -> skipping refresh validation")
+                stored_user = None
         
         #DB Check
         result = await db.execute(
@@ -240,14 +242,15 @@ async def refresh_token(
 
         hashed_access = hash_token(new_access_token)
 
-        try:
-            await redis_client.setex(
-            f"session:{hashed_access}",
-            ACCESS_TOKEN_EXPIRES_SECONDS,
-            str(user_id)
-            )
-        except RedisError:
-            logger.warning("Redis unavailable -> skipping session store")
+        if redis_available:
+            try:
+                await redis_client.setex(
+                f"session:{hashed_access}",
+                ACCESS_TOKEN_EXPIRES_SECONDS,
+                str(user_id)
+                )
+            except RedisError:
+                logger.warning("Redis unavailable -> skipping session store")
 
         return {
             "access_token": new_access_token,
@@ -271,20 +274,21 @@ async def logout(
         token = credentials.credentials
         hashed_access = hash_token(token)
 
-        # get linked refresh token
-        refresh_hash = await redis_client.get(
-            f"access_to_refresh:{hashed_access}"
-        )
+        if redis_available:
+            # get linked refresh token
+            refresh_hash = await redis_client.get(
+                f"access_to_refresh:{hashed_access}"
+            )
 
-        # delete access session
-        await redis_client.delete(f"session:{hashed_access}")
+            # delete access session
+            await redis_client.delete(f"session:{hashed_access}")
 
-        # delete mapping
-        await redis_client.delete(f"access_to_refresh:{hashed_access}")
+            # delete mapping
+            await redis_client.delete(f"access_to_refresh:{hashed_access}")
 
-        # delete refresh session
-        if refresh_hash:
-            await redis_client.delete(f"refresh:{refresh_hash}")
+            # delete refresh session
+            if refresh_hash:
+                await redis_client.delete(f"refresh:{refresh_hash}")
         
         logger.info("User logged out completely")
         return {"message": "Logged out successfully"}
@@ -295,3 +299,4 @@ async def logout(
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail = 'Internal server error'
         )
+
