@@ -163,16 +163,16 @@ class ProtectedUser(HttpUser):
         }
 
         with self.client.get(
-            "/users/me",
+            "/auth/me",
             headers=headers,
-            name="GET /users/me",
+            name="GET /auth/me",
             catch_response=True
         ) as response:
             if response.status_code == 200:
                 response.success()
             else:
                 response.failure(
-                    f"/users/me failed | status={response.status_code} | body={response.text}"
+                    f"/auth/me failed | status={response.status_code} | body={response.text}"
                 )
 
     @task(1)
