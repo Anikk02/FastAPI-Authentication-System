@@ -1,26 +1,30 @@
 import os
 import sys
-import asyncio
-import pytest
+import pytest_asyncio
+from dotenv import load_dotenv
 
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import (
-    create_async_engine,
-    AsyncSession
-)
+load_dotenv()
+
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.database import Base, get_db
-from app.main import app
+from backend.app.database import Base, get_db
+from backend.app.main import app
 
-# ✅ Async test DB
-SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./test_auth.db"
+# ✅ safe default so tests never crash on missing env
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "sqlite+aiosqlite:///./test.db"
+)
 
 engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    echo=False,
+    pool_pre_ping=True,
+    future=True,
 )
 
 TestingSessionLocal = sessionmaker(
@@ -29,24 +33,27 @@ TestingSessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
-# ✅ Override dependency
 async def override_get_db():
     async with TestingSessionLocal() as session:
         yield session
 
-# ✅ Create & drop tables async
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def client():
+    # reset schema
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     app.dependency_overrides[get_db] = override_get_db
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
     app.dependency_overrides.clear()
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+print("File executed successfully")

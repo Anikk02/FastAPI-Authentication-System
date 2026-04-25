@@ -1,0 +1,14 @@
+.notfound {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #f9fafb;
+}
+
+.home-link {
+  margin-top: 15px;
+  color: #4f46e5;
+  text-decoration: none;
+}

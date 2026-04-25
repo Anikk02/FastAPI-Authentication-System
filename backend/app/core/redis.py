@@ -1,6 +1,6 @@
 import redis.asyncio as redis
 import logging
-from app.config import settings
+from backend.app.config import settings
 from redis.exceptions import RedisError, ConnectionError, TimeoutError
 
 logger = logging.getLogger(__name__)

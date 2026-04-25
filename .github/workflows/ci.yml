@@ -11,27 +11,46 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_auth_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d test_auth_db"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
       redis:
         image: redis
         ports:
           - 6379:6379
         options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=5
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Set up python
+      - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
       - name: Verify Python version 
-        run:
+        run: |
           python --version
           which python
 
@@ -39,12 +58,30 @@ jobs:
         run: |
           python -m pip install --upgrade pip 
           pip install -r requirements.txt
-      
+
+      # ✅ Wait for Postgres to be ready
+      - name: Wait for Postgres
+        run: |
+          for i in {1..10}; do
+            pg_isready -h localhost -p 5432 -U postgres && break
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
       - name: Run tests
-        env :
+        env:
           SECRET_KEY: ci_test_secret_key_12345678901234567890
           ALGORITHM: HS256
           ACCESS_TOKEN_EXPIRE_MINUTES: 30
-          DATABASE_URL: sqlite+aiosqlite:///./test_ci.db
+
+          # ✅ NEW: Postgres instead of SQLite
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_auth_db
+
+          # (Optional) if your app uses this instead
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_auth_db
+
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
         run: |
-          python -m pytest -v -s
+          pytest -v -s

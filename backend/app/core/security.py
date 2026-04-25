@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from app.config import settings
+from backend.app.config import settings
 
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 

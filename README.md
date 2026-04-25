@@ -1,256 +1,245 @@
-# 🚀 FastAPI Authentication System (Full Stack)
+# 🚀 FastAPI Authentication System (Backend Project)
 
-A **production-ready, scalable authentication system** built with **FastAPI (Backend)** and **React (Frontend)**.  
-This project reflects a **real backend engineering journey**, focusing on performance, scalability, and system design.
+## 📌 Overview
 
----
+This project is a **production-style FastAPI authentication system** designed with scalability, performance, and real-world backend engineering practices in mind.
 
-# 🧠 Project Vision
+It demonstrates how to build and optimize a backend system using:
 
-This system was built to understand how real systems evolve:
-
-
-Database Bottleneck → Optimization → Async Scaling → System Limits
-
-
----
-
-# 🔥 Key Features
-
-## 🔹 Backend
-- 🔐 JWT Authentication (Access + Refresh Tokens)
-- 👤 User Registration & Login
-- ⚡ Fully Async Architecture (FastAPI + asyncpg)
-- 🗄️ PostgreSQL with connection pooling
-- 🚀 Redis caching for performance optimization
-- 📊 Load testing with Locust
-- 📈 Performance benchmarking
-- 🔄 Multi-worker scalability (Uvicorn)
-
-## 🔹 Frontend
-- 🔑 Login & Registration UI
-- 🔐 JWT-based authentication flow
-- 🔄 Persistent login (auto user load)
-- 🛡️ Protected & Public routes
-- ⚡ Axios interceptors (token + error handling)
-- 🧠 Redux Toolkit state management
-- ✅ Form validation
+- FastAPI
+- PostgreSQL
+- Redis
+- JWT Authentication
+- Load Testing (Locust)
 
 ---
 
-# 🏗️ System Architecture
+## 🧠 Key Features
 
+- 🔐 JWT-based Authentication (Login/Register)
+- 👤 User Management APIs
+- ⚡ Redis Caching for performance optimization
+- 🗄️ PostgreSQL with optimized connection pooling
+- 🧪 Load testing with Locust
+- 📊 Performance benchmarking & analysis
+- 🔄 Multi-worker scaling using Uvicorn
 
-Client (React)
-↓
-FastAPI Backend
-↓
-Redis Cache
-↓
-PostgreSQL
-↓
-JWT Auth Layer
+---
 
+## 🏗️ Tech Stack
+
+| Layer | Technology |
+|------|-----------|
+| Backend | FastAPI |
+| Database | PostgreSQL |
+| Cache | Redis |
+| ORM | SQLAlchemy |
+| Auth | JWT (python-jose) |
+| Password Hashing | bcrypt (passlib) |
+| Load Testing | Locust |
+
+---
+
+## ⚙️ System Architecture
+
+```
+Client → FastAPI → Redis (cache) → PostgreSQL
+                ↓
+             JWT Auth
+```
 
 ---
 
 ## Architectural Design
 Shows interactions between FastAPI, Redis, and PostgreSQL with JWT-based authentication.
 ![alt text](architectural_design.png)
----
 
-# 🧰 Tech Stack
+## 🔥 Performance Journey
 
-## 🔹 Backend
+### Phase 1: Initial System
+- High latency
+- DB bottleneck
+- Poor scalability
 
-| Layer | Technology |
-|------|-----------|
-| Framework | FastAPI |
-| Database | PostgreSQL |
-| ORM | SQLAlchemy (Async) |
-| Cache | Redis |
-| Auth | JWT (python-jose) |
-| Hashing | bcrypt (passlib) |
-| Load Testing | Locust |
+### Phase 2: PostgreSQL Optimization
+- Connection pooling introduced
+- Improved stability
 
-## 🔹 Frontend
+### Phase 3: bcrypt Optimization
+- Reduced hashing cost
+- Improved response time
 
-| Layer | Technology |
-|------|-----------|
-| Framework | React (CRA) |
-| State | Redux Toolkit |
-| Routing | React Router |
-| API | Axios |
-| Styling | CSS |
+### Phase 4: Redis Integration
+- Cached `/users/me`
+- Eliminated repeated DB reads
 
 ---
 
-# 📁 Complete Project Structure
+## 📊 Benchmark Results
 
+### ✅ With Redis (300 Users)
 
+- Throughput: ~155 RPS
+- Avg Latency: ~456 ms
+- Failure Rate: ~0.09%
+
+### ⚠️ With Redis (500 Users)
+
+- Throughput: ~93 RPS
+- Avg Latency: ~1.7 sec
+- Failure Rate: ~3%
+
+---
+
+## 🧠 Key Insights
+
+- Redis removed the database bottleneck
+- System shifted from **I/O-bound → CPU-bound**
+- bcrypt hashing became the main limitation
+- Worker saturation affects performance under high load
+
+---
+
+## 📁 Project Structure
+
+```
 FastAPI-Authentication-System/
 │
-├── backend/
-│ ├── app/
-│ │ ├── core/
-│ │ │ └── redis.py
-│ │ │
-│ │ ├── routes/
-│ │ │ ├── auth_routes.py
-│ │ │ ├── user_routes.py
-│ │ │ └── redis_routes.py
-│ │ │
-│ │ ├── auth.py
-│ │ ├── config.py
-│ │ ├── database.py
-│ │ ├── dependencies.py
-│ │ ├── logger.py
-│ │ ├── main.py
-│ │ ├── models.py
-│ │ └── schemas.py
-│ │
-│ ├── diagrams/
-│ ├── performance/
-│ ├── tests/
-│ ├── logs/
-│ ├── requirements.txt
-│ └── README.md
+├── .github/
+│ └── workflows/
+│ └── ci.yml # CI/CD pipeline (GitHub Actions)
 │
-├── frontend/
-│ ├── public/
-│ ├── src/
-│ │ ├── api/
-│ │ ├── app/
-│ │ ├── components/
-│ │ ├── features/auth/
-│ │ ├── pages/
-│ │ ├── routes/
-│ │ ├── utils/
-│ │ ├── styles/
-│ │ ├── App.jsx
-│ │ └── index.js
+├── app/
+│ ├── core/
+│ │ └── redis.py # Redis client setup
 │ │
-│ ├── .env
-│ ├── package.json
-│ └── README.md
+│ ├── routes/
+│ │ ├── auth_routes.py # Authentication endpoints (login/register)
+│ │ ├── user_routes.py # User endpoints (/users/me)
+│ │ ├── redis_routes.py # Redis test/debug endpoints
+│ │ └── init.py
+│ │
+│ ├── init.py
+│ ├── auth.py # JWT + password hashing (bcrypt)
+│ ├── config.py # Environment configuration
+│ ├── database.py # DB connection & session
+│ ├── dependencies.py # Auth dependency (get_current_user)
+│ ├── logger.py # Logging setup
+│ ├── main.py # FastAPI entry point
+│ ├── models.py # SQLAlchemy models
+│ └── schemas.py # Pydantic schemas
 │
-└── README.md
-
+├── diagrams/ # System design diagrams
+│ ├── architectural_design.png
+│ ├── component.png
+│ ├── sequence_login.png
+│ ├── sequence_users_me.png
+│ ├── state_auth.png
+│ ├── deployment.png
+│ └── data_flow.png
+│
+├── performance/ # Load testing & benchmarking
+│ ├── screenshots/ # Locust UI screenshots
+│ ├── results/ # Metrics per phase
+│ └── notes/ # Observations & insights
+│
+├── tests/ # Unit & integration tests
+├── logs/ # Application logs
+│
+├── requirements.txt # Dependencies
+├── README.md # Project documentation
+├── LICENSE
+├── .gitignore
+├── test_auth.db # SQLite test DB (local/testing)
+└── .test_auth.db # Temporary test DB (CI)
+```
 
 ---
 
-# 🚀 Backend Setup
+## 🚀 How to Run
 
-```bash
-# Clone repository
+### 1. Clone Repository
+
+```
 git clone <your-repo-url>
+cd FastAPI-Authentication-System
+```
 
-cd FastAPI-Authentication-System/backend
+### 2. Install Dependencies
 
-# Install dependencies
+```
 pip install -r requirements.txt
-Start Services
-# PostgreSQL (ensure running)
+```
 
-# Redis (Docker)
+### 3. Start PostgreSQL
+
+Make sure PostgreSQL is running and configured.
+
+### 4. Start Redis (Docker)
+
+```
 docker run -d -p 6379:6379 redis
-Run Backend
+```
+
+### 5. Run Server
+
+```
 uvicorn app.main:app --workers 4
-🚀 Frontend Setup
-cd frontend
+```
 
-npm install
-npm start
-🌐 Backend URL
-http://127.0.0.1:8000
-🔐 Authentication Flow
-Register/Login → Get Tokens
-                ↓
-        Store Access Token
-                ↓
-     Attach via Axios Interceptor
-                ↓
-        Access Protected Routes
-                ↓
-     Refresh Token when expired
-📊 Performance Journey
-Phase 1: Initial System
-High latency
-DB bottleneck
-Phase 2: PostgreSQL Optimization
-Connection pooling added
-Phase 3: bcrypt Optimization
-Reduced hashing cost
-Phase 4: Redis Integration
-Cached /users/me
-Reduced DB load
-Phase 5: Multi-worker Scaling
-Improved concurrency
-⚡ Phase 6: Async Migration & Load Testing
-Objective
+---
 
-Evaluate performance after async migration:
+## 🧪 Load Testing
 
-FastAPI async
-SQLAlchemy async engine
-asyncpg
-Redis caching
-🔹 Scenario 1: 400 Users (Spawn 5)
-RPS: ~100
-Avg Latency: ~1555 ms
-Failure Rate: ~0.02%
+Run Locust:
 
-✅ Stable
+```
+locust -f locustfile.py --host=http://127.0.0.1:8000
+```
 
-🔹 Scenario 2: 800 Users (Spawn 5)
-RPS: ~116
-Avg Latency: ~3726 ms
-Failure Rate: ~0.06%
+Open:
 
-⚠️ High latency but stable
+```
+http://localhost:8089
+```
 
-🔹 Scenario 3: 400 Users (Spawn 10)
-RPS: ~40
-Avg Latency: ~6493 ms
-Failure Rate: ~14%
+---
 
-❌ System breakdown
+## 🔮 Future Improvements
 
-🔍 Key Findings
-Async handles steady load well
-System fails under burst traffic
-DB pool saturation occurs
-bcrypt becomes CPU bottleneck
-🔐 Phase 7: Token System Upgrade
-Introduced Access Token + Refresh Token
-Improved session handling
-Reduced frequent logins
-Prepared system for scalability
-📌 Final Insights
-Redis removed DB bottleneck
-System became CPU-bound
-Async improved scalability
-Burst traffic still breaks system
-🚀 Future Improvements
-Rate limiting (critical)
-Backpressure handling
-Background workers
-Load balancing (Nginx)
-Horizontal scaling
-UI improvements (Frontend)
-🧠 Key Learnings
-Backend system design
-Async architecture
-Load testing & benchmarking
-Bottleneck identification
-Real-world scalability challenges
-👨‍💻 Author
+- Async DB (asyncpg)
+- Background password hashing
+- Load balancer (Nginx)
+- Horizontal scaling (multiple instances)
+- Rate limiting using Redis
 
-Aniket Paswan
-Aspiring AI Engineer | Backend Developer
+---
 
-⭐ Final Note
+## 🎯 What This Project Demonstrates
 
-This project reflects a real engineering mindset:
+- Backend system design
+- Performance optimization
+- Load testing & benchmarking
+- Bottleneck identification
+- Real-world scalability challenges
 
-Optimize → Measure → Break → Improve → Repeat
+---
+
+## 👨‍💻 Author
+
+**Aniket Paswan**
+
+Aspiring AI/ML Engineer,Backend Engineer
+
+---
+
+## ⭐ Final Note
+
+This project reflects a **real engineering journey**:
+
+```
+Database Bottleneck → Redis Optimization → CPU Bottleneck
+```
+
+Understanding this transition is key to designing scalable backend systems.
+

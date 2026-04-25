@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter
-from app.core.redis import redis_client
+from backend.app.core.redis import redis_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

@@ -8,12 +8,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.core.security import decode_access_token
-from app.database import get_db
-from app.models.user import User
-from app.core.redis import redis_client, redis_available
+from backend.app.core.security import decode_access_token
+from backend.app.database import get_db
+from backend.app.models.user import User
+from backend.app.core.redis import redis_client, redis_available
 import redis.asyncio as redis
-from app.schemas import UserResponse
+from backend.app.schemas import UserResponse
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()

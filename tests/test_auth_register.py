@@ -1,12 +1,16 @@
 import pytest
+import uuid
+
 
 @pytest.mark.asyncio
 async def test_register_user_success(client):
+    unique_email = f"aniket_{uuid.uuid4()}@example.com"
+
     response = await client.post(
         '/auth/register',
         json={
             'name': 'Aniket',
-            'email': 'aniket@example.com',
+            'email': unique_email,
             'password': 'strongpass123'
         }
     )
@@ -15,24 +19,26 @@ async def test_register_user_success(client):
     data = response.json()
 
     assert data['name'] == 'Aniket'
-    assert data['email'] == 'aniket@example.com'
+    assert data['email'] == unique_email
     assert 'id' in data
     assert 'hashed_password' not in data
 
 
 @pytest.mark.asyncio
 async def test_register_duplicate_email(client):
+    unique_email = f"aniket_{uuid.uuid4()}@example.com"
+
     payload = {
         'name': 'Aniket',
-        'email': 'aniket@example.com',
+        'email': unique_email,
         'password': 'strongpass123'
     }
 
-    # ✅ First registration
+    # First registration
     res1 = await client.post('/auth/register', json=payload)
     assert res1.status_code == 201
 
-    # ✅ Duplicate attempt
+    # Duplicate attempt
     response = await client.post('/auth/register', json=payload)
 
     assert response.status_code == 400

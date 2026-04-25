@@ -1,14 +1,15 @@
 import logging
 
+from backend.app.models import session_model
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # ✅ ADD THIS
 
-from app.database import Base, engine
-from app.logger import setup_logging
-from app.models import user, session_model
-from app.routes.auth_routes import router as auth_router
-from app.routes.user_routes import router as user_router
-from app.routes.redis_routes import router as redis_router
+from backend.app.database import Base, engine
+from backend.app.logger import setup_logging
+from backend.app.models import user
+from backend.app.routes.auth_routes import router as auth_router
+from backend.app.routes.user_routes import router as user_router
+from backend.app.routes.redis_routes import router as redis_router
 
 setup_logging()
 logger = logging.getLogger(__name__)
