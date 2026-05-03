@@ -9,14 +9,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from backend.app.database import get_db, safe_execute
-from backend.app.core.redis import redis_client, redis_available
+from app.database import get_db, safe_execute
+from app.core.redis import redis_client, redis_available
 from redis.exceptions import RedisError
-from backend.app.config import settings
-from backend.app.schemas import RefreshTokenRequest
-from backend.app.models.user import User
-from backend.app.models.session_model import Session
-from backend.app.core.security import (
+from app.config import settings
+from app.schemas import RefreshTokenRequest
+from app.models.user import User
+from app.models.session_model import Session
+from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_access_token,
@@ -24,7 +24,7 @@ from backend.app.core.security import (
     verify_password,
     hash_token
 )
-from backend.app.schemas import TokenResponse, UserLogin, UserRegister, UserResponse
+from app.schemas import TokenResponse, UserLogin, UserRegister, UserResponse
 
 logger = logging.getLogger(__name__)
 

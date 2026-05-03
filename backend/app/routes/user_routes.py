@@ -2,9 +2,9 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from backend.app.dependencies import get_current_user
-from backend.app.models.user import User
-from backend.app.schemas import UserResponse
+from app.dependencies import get_current_user
+from app.models.user import User
+from app.schemas import UserResponse
 
 logger = logging.getLogger(__name__)
 

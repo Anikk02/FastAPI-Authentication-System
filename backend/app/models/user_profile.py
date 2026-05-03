@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.app.database import Base
+from app.database import Base
 
 logger = logging.getLogger(__name__)
 
