@@ -36,17 +36,17 @@ frontend/
 ├── public/
 │
 ├── src/
-│ ├── api/ # Axios + API calls
-│ ├── app/ # Redux store + hooks
-│ ├── components/ # Reusable UI components
-│ ├── features/
-│ │ └── auth/ # Auth module (slice, forms, pages)
-│ ├── pages/ # App-level pages
-│ ├── routes/ # Routing (protected + public)
-│ ├── utils/ # Helpers (validators, token)
-│ ├── styles/ # Global styles
-│ ├── App.jsx
-│ └── index.js
+│   ├── api/               # Axios + API calls
+│   ├── app/               # Redux store + hooks
+│   ├── components/        # Reusable UI components
+│   ├── features/
+│   │   └── auth/          # Auth module (slice, forms, pages)
+│   ├── pages/             # App-level pages
+│   ├── routes/            # Routing (protected + public)
+│   ├── utils/             # Helpers (validators, token)
+│   ├── styles/            # Global styles
+│   ├── App.jsx
+│   └── index.js
 │
 ├── .env
 ├── package.json
