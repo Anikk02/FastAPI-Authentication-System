@@ -30,7 +30,7 @@ A scalable and production-ready authentication frontend built with React, Redux 
 
 ## 📂 Project Structure
 
-
+```
 frontend/
 │
 ├── public/
@@ -51,7 +51,7 @@ frontend/
 ├── .env
 ├── package.json
 └── README.md
-
+```
 
 ---
 
