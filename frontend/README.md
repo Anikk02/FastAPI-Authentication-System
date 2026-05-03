@@ -59,9 +59,9 @@ frontend/
 
 Create a `.env` file in the root:
 
-
+```
 REACT_APP_API_BASE_URL=http://127.0.0.1:8000
-
+```
 
 ---
 
@@ -79,59 +79,93 @@ npm install
 
 # 4. Start development server
 npm start
-🔗 Backend Integration
+```
+
+---
+
+## 🔗 Backend Integration
 
 This frontend is designed to work with a FastAPI backend providing:
 
-POST /auth/register
-POST /auth/login
-GET /auth/me
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /auth/me`
 
-Make sure your backend is running on:
+Make sure your backend is running on: `http://127.0.0.1:8000`
 
-http://127.0.0.1:8000
-🔐 Authentication Flow
+---
+
+## 🔐 Authentication Flow
+
+```
 Login/Register → Store JWT → Attach via Axios → Access Protected Routes
                          ↓
                   Auto-load user on refresh
-🛡️ Route Protection
-Public Routes:
-/login
-/register
-Protected Routes:
-/dashboard
-🔄 Axios Interceptors
-Automatically attaches JWT to every request
-Handles 401 Unauthorized globally
-Prepares system for refresh token implementation
-🧪 Validation
-Email format validation
-Password length validation
-Prevents invalid API calls
-📈 Future Improvements
-🔁 Refresh Token Flow (Auto-login without logout)
-🎨 UI Upgrade (Tailwind / Modern Design)
-🔔 Toast Notifications
-👤 User Profile & Settings
-🔐 Role-Based Authorization (Admin/User)
-🌐 Deployment (Vercel + Backend Hosting)
-📸 Screens (Optional)
+```
 
-Add screenshots here after UI improvement
+---
 
-🧠 Key Learnings
-Scalable frontend architecture
-Redux async flows (createAsyncThunk)
-Secure authentication handling
-API integration with interceptors
-Clean separation of concerns
+## 🛡️ Route Protection
 
-👨‍💻 Author
+**Public Routes:**
+- `/login`
+- `/register`
 
-Aniket Paswan
+**Protected Routes:**
+- `/dashboard`
 
-Aspiring AI/ML Engineer
-Focused on building scalable systems and real-world applications
-⭐ Contribute / Feedback
+---
+
+## 🔄 Axios Interceptors
+
+- Automatically attaches JWT to every request
+- Handles 401 Unauthorized globally
+- Prepares system for refresh token implementation
+
+---
+
+## ✅ Validation
+
+- Email format validation
+- Password length validation
+- Prevents invalid API calls
+
+---
+
+## 📈 Future Improvements
+
+- 🔁 Refresh Token Flow (Auto-login without logout)
+- 🎨 UI Upgrade (Tailwind / Modern Design)
+- 🔔 Toast Notifications
+- 👤 User Profile & Settings
+- 🔐 Role-Based Authorization (Admin/User)
+- 🌐 Deployment (Vercel + Backend Hosting)
+
+---
+
+## 📸 Screenshots
+
+
+---
+
+## 🧠 Key Learnings
+
+- Scalable frontend architecture
+- Redux async flows (createAsyncThunk)
+- Secure authentication handling
+- API integration with interceptors
+- Clean separation of concerns
+
+---
+
+## 👨‍💻 Author
+
+**Aniket Paswan**
+
+Aspiring AI/ML Engineer | Backend Engineer
+
+---
+
+## ⭐ Contribute / Feedback
 
 Feel free to fork, improve, and suggest enhancements!
