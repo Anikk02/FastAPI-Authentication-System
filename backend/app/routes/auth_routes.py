@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.exc import SQLAlchemyError
@@ -267,7 +267,7 @@ async def refresh_token(
             detail = "Internal server error"
         )
     
-@router.post("/logout")
+@router.post("/logout", status_code = 204)
 async def logout(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
@@ -292,7 +292,7 @@ async def logout(
                 await redis_client.delete(f"refresh:{refresh_hash}")
         
         logger.info("User logged out completely")
-        return {"message": "Logged out successfully"}
+        return Response(status_code=204)
     
     except Exception as e:
         logger.exception("Logout error")
