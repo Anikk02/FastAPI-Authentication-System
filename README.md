@@ -68,7 +68,7 @@ Client (React) → FastAPI → Redis (cache) → PostgreSQL
 
 Shows interactions between FastAPI, Redis, and PostgreSQL with JWT-based authentication.
 
-![Architectural Design](diagrams/architectural_design.png)
+![Architectural Design](architectural_design.png)
 
 ---
 
