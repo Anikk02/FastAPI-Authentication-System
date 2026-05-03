@@ -71,6 +71,7 @@ async def register_user(
         db.add(new_user)
         await db.flush()
         await db.refresh(new_user)
+        await db.commit() #commit consistency
 
         logger.info(f"User registered successfully: user_id={new_user.id}, email={mask_email(user_data.email)}")
         return new_user
