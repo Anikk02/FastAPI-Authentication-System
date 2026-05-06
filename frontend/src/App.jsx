@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAppDispatch } from "./app/hooks";
-import { loadUser } from "./features/auth/authslice";
+import { loadUser } from "./features/auth/authSlice";
 import AppRoutes from "./routes/AppRoutes";
 
 function App() {
