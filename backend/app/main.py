@@ -1,17 +1,21 @@
 import logging
+from app.logger import setup_logging
+setup_logging()
+
+import asyncio
+from app.metrics.system_metrics import monitor_system
+from app.metrics.event_loop import monitor_event_loop
 
 from app.models import session_model
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.logger import setup_logging
 from app.models import user
 from app.routes.auth_routes import router as auth_router
 from app.routes.user_routes import router as user_router
 from app.routes.redis_routes import router as redis_router
 
-setup_logging()
 logger = logging.getLogger(__name__)
 
 def create_application() -> FastAPI:
@@ -41,6 +45,12 @@ def create_application() -> FastAPI:
                 async with engine.begin() as conn:
                     await conn.run_sync(Base.metadata.create_all)
                 logger.info("Database tables created successfully")
+
+                # Start metrics monitoring
+                asyncio.create_task(monitor_system())
+                asyncio.create_task(monitor_event_loop())
+                logger.info("Metrics monitoring started")
+
             except Exception as e:
                 logger.exception("Database initialization failed")
                 raise RuntimeError(f"Database initialization error: {e}") from e
@@ -64,3 +74,4 @@ def create_application() -> FastAPI:
 
 
 app = create_application()
+print("CREATE APPLICATION CALLED")

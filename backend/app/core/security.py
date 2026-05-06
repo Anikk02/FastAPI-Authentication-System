@@ -7,6 +7,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.config import settings
+from app.metrics.tracker import track
 
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=10) #reduce round cost
 
 
+@track("password_hash_ms")
 def hash_password(password: str) -> str:
     try:
         hashed_password = pwd_context.hash(password)
@@ -25,6 +27,7 @@ def hash_password(password: str) -> str:
         raise RuntimeError(f"Password hashing error: {e}") from e
 
 
+@track("password_verify_ms")
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         is_valid = pwd_context.verify(plain_password, hashed_password)
@@ -39,7 +42,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         logger.exception("Failed to verify password")
         raise RuntimeError(f"Password verification error: {e}") from e
 
-
+@track("access_token_generation_ms")
 def create_access_token(data: dict[str, Any]) -> str:
     try:
         to_encode = data.copy()
@@ -61,6 +64,7 @@ def create_access_token(data: dict[str, Any]) -> str:
         raise RuntimeError(f"Token creation error: {e}") from e
 
 
+@track("token_validation_ms")
 def decode_access_token(token: str) -> dict[str, Any] | None:
     try:
         payload = jwt.decode(
@@ -82,6 +86,7 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
         logger.exception("Unexpected error while decoding access token")
         raise RuntimeError(f"Token decode error: {e}") from e
 
+@track("refresh_token_generation_ms")
 def create_refresh_token(data : dict)-> str:
     try:
         to_encode = data.copy()
@@ -102,7 +107,7 @@ def create_refresh_token(data : dict)-> str:
         logger.exception("Failed to create refresh token")
         raise RuntimeError(f"Refresh token error: {e}") from e
     
-
+@track("token_hash_ms")
 def hash_token(token: str) -> str:
     try:
         return hashlib.sha256(token.encode()).hexdigest()

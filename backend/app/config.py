@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = 'HS256'
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     DATABASE_URL: str
+    REDIS_URL: str
 
     model_config = SettingsConfigDict(
         env_file='.env',
@@ -35,6 +36,15 @@ class Settings(BaseSettings):
         if not value.startswith(('sqlite+aiosqlite://','postgresql+asyncpg://','mysql://')):
             raise ValueError(
                 'DATABASE_URL must start with sqlite+aiosqlite://, postgresql+asyncpg://, or mysql://'
+            )
+        return value
+    
+    @field_validator("REDIS_URL")
+    @classmethod
+    def validate_redis_url(cls, value: str) -> str:
+        if not value.startswith(("redis://", "rediss://")):
+            raise ValueError(
+                "REDIS_URL must start with redis:// or rediss://"
             )
         return value
     

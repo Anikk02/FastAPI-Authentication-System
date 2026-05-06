@@ -9,21 +9,29 @@ os.makedirs(LOG_DIR, exist_ok=True)
 def setup_logging():
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.WARNING)
-
-    if root_logger.handlers:
-        return root_logger
+ 
+    # Clear existing handlers
+    if root_logger.hasHandlers():
+        root_logger.handlers.clear()
     
+    #Set level to INFO
+    root_logger.setLevel(logging.INFO)
     #formatter
     formatter = logging.Formatter(
         "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
     )
 
     console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
 
     file_handler = ConcurrentRotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=3)
     file_handler.setFormatter(formatter)
 
+    # Force immediate writing of logs
+    file_handler.delay = False
+    
+    # Add Handlers
     root_logger.addHandler(console_handler)
     root_logger.addHandler(file_handler)
 

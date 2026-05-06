@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
@@ -25,6 +26,7 @@ from app.core.security import (
     hash_token
 )
 from app.schemas import TokenResponse, UserLogin, UserRegister, UserResponse
+from app.metrics.tracker import log_metric
 
 logger = logging.getLogger(__name__)
 
@@ -96,13 +98,19 @@ async def login_user(
     user_data: UserLogin,
     db: AsyncSession = Depends(get_db)
 )->TokenResponse:
+    
+    start_total = time.perf_counter()
     try:
         logger.info(f"Login attempt for email={mask_email(user_data.email)}")
-
+        
+        # DB lookup timing
+        start = time.perf_counter()
         result = await safe_execute(
             db,
             select(User).where(User.email == user_data.email)
         )
+        log_metric("db_user_lookup_ms", (time.perf_counter() - start) * 1000)
+
         user = result.scalar_one_or_none()
         if user is None:
             logger.warning(f"Login failed: user not found for email={mask_email(user_data.email)}")
@@ -111,11 +119,15 @@ async def login_user(
                 detail="Invalid email or password"
             )
         
+        # Threadpool timing
+        start = time.perf_counter()
         is_valid = await run_in_threadpool(
             verify_password,
             user_data.password,
             user.hashed_password
         )
+        log_metric("password_verify_threadpool_ms", (time.perf_counter() - start) * 1000)
+
         if not is_valid:
             logger.warning(f"Login failed: invalid password for email={mask_email(user_data.email)}")
             raise HTTPException(
@@ -138,6 +150,8 @@ async def login_user(
 
         # Store in Redis
         if redis_available:
+            #redis timing
+            start = time.perf_counter()
             try:
                 await redis_client.setex(
                 f"session:{hashed_access}",
@@ -165,6 +179,8 @@ async def login_user(
                 )
             except RedisError:
                 logger.warning("Redis unavailable -> skipping link access")
+            log_metric("redis_set_session_ms", (time.perf_counter() - start) * 1000)
+
 
         # Store session in DB
         session = Session(
@@ -175,7 +191,9 @@ async def login_user(
 
         db.add(session)
         await db.commit()
-
+        
+        # Total login timing
+        log_metric('login_total_ms', (time.perf_counter() - start_total) * 1000)
         logger.info(f"User logged in successfully: user_id={user.id}")
         return TokenResponse(
             access_token=access_token,
