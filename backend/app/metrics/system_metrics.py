@@ -11,13 +11,13 @@ async def monitor_system(interval: int = 5):
         cpu = psutil.cpu_percent()
         memory = psutil.virtual_memory().percent
 
-        logger.info({
+        logger.debug({
             'trace_id': get_trace_id(),
             'metric': 'cpu_usage_percent',
             'value': cpu
         })
 
-        logger.info({
+        logger.debug({
             'trace_id': get_trace_id(),
             'metric': 'memory_usage_percent',
             'value': memory

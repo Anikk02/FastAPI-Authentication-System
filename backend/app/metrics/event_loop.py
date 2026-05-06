@@ -14,8 +14,8 @@ async def monitor_event_loop(interval: float = 1.0):
 
         lag = (loop.time() - start - interval) * 1000
 
-        logger.info({
-            'trace_id': get_trace_id,
+        logger.debug({
+            'trace_id': get_trace_id(),
             'metric': 'event_loop_lag_ms',
             'value': round(lag, 3)
         })
