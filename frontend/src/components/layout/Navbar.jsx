@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { logout } from "../../features/auth/authSlice";
+import { logout } from "../../features/auth/authslice";
 import "./Navbar.css";
 
 const Navbar = () => {
