@@ -1,71 +1,53 @@
 import logging
-
+import asyncio
 import redis.asyncio as redis
 
-from redis.exceptions import (
-    RedisError,
-    ConnectionError,
-    TimeoutError
-)
-
+from redis.exceptions import RedisError, ConnectionError, TimeoutError
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-try:
-    redis_client = redis.from_url(
-        settings.REDIS_URL,
-        decode_responses=True,
-        max_connections=100,
-        socket_connect_timeout=5,
-        socket_timeout=5
-    )
+#Create Redis client
+redis_client = redis.from_url(
+    settings.REDIS_URL,
+    decode_responses=True,
+    max_connections=10,
+    socket_connect_timeout=2,
+    socket_timeout=2
+)
 
-    # Global Redis availability flag
-    redis_available = False
 
-    async def check_redis():
-        global redis_available
+#GET with timeout
+async def redis_get(key: str):
+    try:
+        return await asyncio.wait_for(
+            redis_client.get(key),
+            timeout=0.05  # 50ms max
+        )
+    except (RedisError, ConnectionError, TimeoutError, asyncio.TimeoutError):
+        logger.warning("Redis GET failed → fallback")
+        return None
 
-        try:
-            await redis_client.ping()
 
-            redis_available = True
+#SET with timeout
+async def redis_set(key: str, value: str, ttl: int = 300):
+    try:
+        await asyncio.wait_for(
+            redis_client.setex(key, ttl, value),
+            timeout=0.05
+        )
+    except (RedisError, ConnectionError, TimeoutError, asyncio.TimeoutError):
+        logger.warning("Redis SET failed → skipping cache")
 
-            logger.info(
-                "Redis connected successfully"
-            )
 
-        except (ConnectionError, TimeoutError) as e:
-            redis_available = False
-
-            logger.warning(
-                f"Redis unavailable: {e}"
-            )
-
-        except RedisError as e:
-            redis_available = False
-
-            logger.error(
-                f"Redis error: {e}"
-            )
-
-        except Exception:
-            redis_available = False
-
-            logger.exception(
-                "Unexpected Redis error"
-            )
-
-    logger.info(
-        "Async Redis client initialized successfully"
-    )
-
-except Exception as e:
-    logger.exception(
-        "Failed to initialize Redis client"
-    )
-
-    raise RuntimeError(
-        f"Redis initialization error: {e}"
-    ) from e
+#Safe session check
+async def redis_exists(key: str):
+    try:
+        result = await asyncio.wait_for(
+            redis_client.get(key),
+            timeout=0.05
+        )
+        return result is not None
+    except Exception:
+        logger.warning("Redis EXISTS failed → assuming valid")
+        return True  # fail-open
