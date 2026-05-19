@@ -7,8 +7,13 @@ router = APIRouter()
 
 @router.get('/redis-test')
 async def redis_test():
-    await redis_client.set('test_key','hello_aniket')
-    value = await redis_client.get('test_key')
+    try:
+        await redis_client.set('test_key', 'hello_aniket')
+        value = await redis_client.get('test_key')
 
-    logger.info("Redis test endpoint hit")
-    return {'value':value}
+        logger.info("Redis test success")
+        return {'value': value}
+
+    except Exception as e:
+        logger.exception("Redis test failed")
+        return {"error": str(e)}
