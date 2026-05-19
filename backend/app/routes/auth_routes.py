@@ -8,10 +8,10 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.exc import SQLAlchemyError
 #from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 
 from app.database import get_db, safe_execute
-from app.core.redis import redis_client, redis_available
+from app.core.redis import redis_get, redis_set, redis_exists, redis_delete
 from redis.exceptions import RedisError
 from app.config import settings
 from app.schemas import RefreshTokenRequest
@@ -148,38 +148,40 @@ async def login_user(
         hashed_access = hash_token(access_token)
         hashed_refresh_token = hash_token(refresh_token)
 
-        # Store in Redis
-        if redis_available:
-            #redis timing
-            start = time.perf_counter()
-            try:
-                await redis_client.setex(
-                f"session:{hashed_access}",
-                ACCESS_TOKEN_EXPIRES_SECONDS,
-                user.id
-                )
-            except RedisError:
-                logger.warning("Redis unavailable -> skipping access session storage")
+        # Store sessions in Redis
+        start = time.perf_counter()
 
-            try:
-                await redis_client.setex(
-                f"refresh:{hashed_refresh_token}",
-                7 * 24 * 60 * 60, # 7 days
-                user.id
-                )
-            except RedisError:
-                logger.warning("Redis unavailable -> skipping refresh storage")
+        #Access session
+        try:
+            await redis_set(
+                key=f"session:{hashed_access}",
+                value=str(user.id),
+                ttl=ACCESS_TOKEN_EXPIRES_SECONDS
+            )
+        except Exception:
+            logger.warning("Access session storage failed")
+
+        #Refresh session
+        try:
+            await redis_set(
+                key=f"refresh:{hashed_refresh_token}",
+                value=str(user.id),
+                ttl=7 * 24 * 60 * 60
+            )
+        except Exception:
+            logger.warning("Refresh session storage failed")
         
-            # link access -> refresh
-            try:
-                await redis_client.setex(
-                f"access_to_refresh:{hashed_access}",
-                ACCESS_TOKEN_EXPIRES_SECONDS,
-                hashed_refresh_token
-                )
-            except RedisError:
-                logger.warning("Redis unavailable -> skipping link access")
-            log_metric("redis_set_session_ms", (time.perf_counter() - start) * 1000)
+        #Link access - > refresh
+        try:
+            await redis_set(
+                key=f"access_to_refresh:{hashed_access}",
+                value=hashed_refresh_token,
+                ttl=ACCESS_TOKEN_EXPIRES_SECONDS
+            )
+        except Exception:
+            logger.warning("Access->Refresh link failed")
+        
+        log_metric("redis_set_session_ms", (time.perf_counter() - start) * 1000)
 
 
         # Store session in DB
@@ -236,40 +238,37 @@ async def refresh_token(
 
         hashed_refresh = hash_token(token)
 
-        # Check Redis
-        if redis_available:
-            try:
-                stored_user = await redis_client.get(f"refresh:{hashed_refresh}")
-            except RedisError:
-                logger.warning("Redis unavailable -> skipping refresh validation")
-                stored_user = None
-        
-        #DB Check
-        result = await db.execute(
-            select(Session).where(Session.refresh_token_hash==hashed_refresh)
-        )
-        session = result.scalar_one_or_none()
+        #REDIS FIRST
+        stored_user = await redis_get(f"refresh:{hashed_refresh}")
 
-        if not stored_user or session is None:
-            raise HTTPException(
-                status_code = status.HTTP_401_UNAUTHORIZED,
-                detail = "Refresh token expired or invalid"
+        if stored_user:
+            logger.info(f"Redis HIT refresh user_id={user_id}")
+        else:
+            logger.info(f"Redis MISS -> DB fallback user_id={user_id}")
+
+            #DB Validation (fallback)
+            result = await db.execute(
+                select(Session).where(Session.refresh_token_hash==hashed_refresh)
             )
+            session = result.scalar_one_or_none()
+
+            if not stored_user or session is None:
+                raise HTTPException(
+                    status_code = status.HTTP_401_UNAUTHORIZED,
+                    detail = "Refresh token expired or invalid"
+                )
         
-        #issue new access token
+        #Issue new access token
         new_access_token = create_access_token({"user_id": user_id})
 
         hashed_access = hash_token(new_access_token)
 
-        if redis_available:
-            try:
-                await redis_client.setex(
-                f"session:{hashed_access}",
-                ACCESS_TOKEN_EXPIRES_SECONDS,
-                str(user_id)
-                )
-            except RedisError:
-                logger.warning("Redis unavailable -> skipping session store")
+        #Store session (fail-open)
+        await redis_set(
+            key=f"session:{hashed_access}",
+            value=str(user_id),
+            ttl=ACCESS_TOKEN_EXPIRES_SECONDS
+        )
 
         return {
             "access_token": new_access_token,
@@ -278,7 +277,7 @@ async def refresh_token(
     except HTTPException:
         raise
     
-    except Exception as e:
+    except Exception:
         logger.exception("Refresh token error")
         raise HTTPException(
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -287,27 +286,33 @@ async def refresh_token(
     
 @router.post("/logout", status_code = 204)
 async def logout(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         token = credentials.credentials
         hashed_access = hash_token(token)
 
-        if redis_available:
-            # get linked refresh token
-            refresh_hash = await redis_client.get(
-                f"access_to_refresh:{hashed_access}"
+        # get linked refresh token
+        refresh_hash = await redis_get(
+            f"access_to_refresh:{hashed_access}"
+        )
+
+        # delete access session
+        await redis_delete(f"session:{hashed_access}")
+
+        # delete mapping
+        await redis_delete(f"access_to_refresh:{hashed_access}")
+
+        # delete refresh session
+        if refresh_hash:
+            await redis_delete(f"refresh:{refresh_hash}")
+
+            #delete from DB as well
+            await db.execute(
+                delete(Session).where(Session.refresh_token_hash == refresh_token)
             )
-
-            # delete access session
-            await redis_client.delete(f"session:{hashed_access}")
-
-            # delete mapping
-            await redis_client.delete(f"access_to_refresh:{hashed_access}")
-
-            # delete refresh session
-            if refresh_hash:
-                await redis_client.delete(f"refresh:{refresh_hash}")
+            await db.commit()
         
         logger.info("User logged out completely")
         return Response(status_code=204)
