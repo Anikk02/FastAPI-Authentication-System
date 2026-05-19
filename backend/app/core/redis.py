@@ -14,9 +14,7 @@ redis_client = redis.from_url(
     max_connections=20,
     socket_connect_timeout=2,
     socket_timeout=2,
-    health_check_interval=30,
-    ssl=True,
-    ssl_cert_reqs=None #avoid cert issues
+    health_check_interval=30
 )
 
 REDIS_TIMEOUT = 0.1 #100ms
