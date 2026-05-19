@@ -68,7 +68,7 @@ async def get_current_user(
 
         # 1. Try Redis first
         if cached_user:
-            logger.info("fCache HIT user_id={user_id}")
+            logger.info(f"Cache HIT user_id={user_id}")
             return UserResponse.model_validate_json(cached_user)
 
         # 2. Fallback to DB
