@@ -13,17 +13,13 @@ redis_client = redis.from_url(
     decode_responses=True,
     max_connections=20,
     socket_connect_timeout=2,
-    socket_timeout=2,
+    socket_timeout=3,
     health_check_interval=30
 )
 
-REDIS_TIMEOUT = 1.5 #1500ms
 async def redis_get(key: str):
     try:
-        return await asyncio.wait_for(
-            redis_client.get(key),
-            timeout=REDIS_TIMEOUT  # 100ms max
-        )
+        return await redis_client.get(key)
     except (RedisError, ConnectionError, TimeoutError, asyncio.TimeoutError):
         logger.warning("Redis GET failed → fallback")
         return None
@@ -32,10 +28,7 @@ async def redis_get(key: str):
 #SET with timeout
 async def redis_set(key: str, value: str, ttl: int = 300):
     try:
-        await asyncio.wait_for(
-            redis_client.setex(key, ttl, value),
-            timeout=REDIS_TIMEOUT
-        )
+        await redis_client.setex(key, ttl, value)
     except (RedisError, ConnectionError, TimeoutError, asyncio.TimeoutError):
         logger.warning("Redis SET failed → skipping cache")
 
@@ -43,22 +36,15 @@ async def redis_set(key: str, value: str, ttl: int = 300):
 #Safe session check
 async def redis_exists(key: str):
     try:
-        result = await asyncio.wait_for(
-            redis_client.get(key),
-            timeout=REDIS_TIMEOUT
-        )
-        return result == 1
+        return await redis_client.exists(key) == 1
     except Exception:
         logger.warning("Redis EXISTS failed → assuming valid")
-        return True  # fail-open
+        return False  # fail-closed
 
 #DELETE
 
 async def redis_delete(key: str):
     try:
-        await asyncio.wait_for(
-            redis_client.delete(key),
-            timeout=REDIS_TIMEOUT
-        )
+        await redis_client.delete(key)
     except (RedisError, ConnectionError, TimeoutError, asyncio.TimeoutError):
         logger.warning(f"Redis DELETE failed -> skipping | key={key}")
