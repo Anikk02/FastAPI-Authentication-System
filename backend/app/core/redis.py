@@ -17,7 +17,7 @@ redis_client = redis.from_url(
     health_check_interval=30
 )
 
-REDIS_TIMEOUT = 0.8 #100ms
+REDIS_TIMEOUT = 2 #2000ms
 async def redis_get(key: str):
     try:
         return await asyncio.wait_for(
