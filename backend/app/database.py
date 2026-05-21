@@ -11,7 +11,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-DB_CONCURRENCY_LIMIT = 40
+DB_CONCURRENCY_LIMIT = 20
 db_semaphore = asyncio.Semaphore(DB_CONCURRENCY_LIMIT)
 
 try:
@@ -30,8 +30,8 @@ try:
         #Also cuz default SQLAlchemy QueuePool configuration could not supply enough
         #DB connections, causing timeouts, internal server error and higher failure rate.
         engine_kwargs.update({
-            'pool_size':50, #keep 50 persistent connections ready
-            'max_overflow':100, #allow 100 extra temporary connection
+            'pool_size':10, #keep 10 persistent connections ready
+            'max_overflow':20, #allow 20 extra temporary connection
             'pool_timeout':30, #wait up to 30s for a connection
             'pool_recycle':1800, #refresh older connections periodically
             'pool_pre_ping': True #prevents stale connections
