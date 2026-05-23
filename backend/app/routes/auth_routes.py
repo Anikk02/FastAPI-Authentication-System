@@ -130,7 +130,7 @@ async def login_user(
                 detail="Invalid email or password"
             )
         
-        user_id, email, name, role, created_at, hashed_password, is_active = user
+        user_id, email, name, hashed_password, is_active, role, created_at = user
         
         # Threadpool timing
         start = time.perf_counter()
