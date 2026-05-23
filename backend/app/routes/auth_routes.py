@@ -6,12 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.exc import SQLAlchemyError
-#from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 
 from app.database import get_db, safe_execute
-from app.core.redis import redis_get, redis_set, redis_exists, redis_delete
+from app.core.redis import redis_get, redis_set, redis_client, redis_delete
 from redis.exceptions import RedisError
 from app.config import settings
 from app.schemas import RefreshTokenRequest
@@ -107,11 +106,11 @@ async def login_user(
         start = time.perf_counter()
         result = await safe_execute(
             db,
-            select(User).where(User.email == user_data.email)
+            select(User.id, User.email, User.hashed_password, User.is_active).where(User.email == user_data.email)
         )
         log_metric("db_user_lookup_ms", (time.perf_counter() - start) * 1000)
 
-        user = result.scalar_one_or_none()
+        user = result.first()
         if user is None:
             logger.warning(f"Login failed: user not found for email={mask_email(user_data.email)}")
             raise HTTPException(
@@ -119,12 +118,14 @@ async def login_user(
                 detail="Invalid email or password"
             )
         
+        user_id, email, hashed_password, is_active = user
+        
         # Threadpool timing
         start = time.perf_counter()
         is_valid = await run_in_threadpool(
             verify_password,
             user_data.password,
-            user.hashed_password
+            hashed_password
         )
         log_metric("password_verify_threadpool_ms", (time.perf_counter() - start) * 1000)
 
@@ -135,64 +136,63 @@ async def login_user(
                 detail = "Invalid email or password"
             )
         
-        if not user.is_active:
+        if not is_active:
             logger.warning(f"Login denied: inactive user user_id={user.id}")
             raise HTTPException(
                 status_code=403,
                 detail = "Inactive user account"
             )
         
-        access_token = create_access_token(data={'user_id':user.id})
+        access_token = create_access_token({'user_id':user.id})
         refresh_token = create_refresh_token({'user_id':user.id})
 
         hashed_access = hash_token(access_token)
         hashed_refresh_token = hash_token(refresh_token)
 
-        # Store sessions in Redis
-        start = time.perf_counter()
-
-        #Access session
-        try:
-            await redis_set(
-                key=f"session:{hashed_access}",
-                value=str(user.id),
-                ttl=ACCESS_TOKEN_EXPIRES_SECONDS
-            )
-        except Exception:
-            logger.warning("Access session storage failed")
-
-        #Refresh session
-        try:
-            await redis_set(
-                key=f"refresh:{hashed_refresh_token}",
-                value=str(user.id),
-                ttl=7 * 24 * 60 * 60
-            )
-        except Exception:
-            logger.warning("Refresh session storage failed")
-        
-        #Link access - > refresh
-        try:
-            await redis_set(
-                key=f"access_to_refresh:{hashed_access}",
-                value=hashed_refresh_token,
-                ttl=ACCESS_TOKEN_EXPIRES_SECONDS
-            )
-        except Exception:
-            logger.warning("Access->Refresh link failed")
-        
-        log_metric("redis_set_session_ms", (time.perf_counter() - start) * 1000)
-
-
-        # Store session in DB
-        session = Session(
-            user_id = user.id,
-            refresh_token_hash = hashed_refresh_token,
-            expires_at=datetime.utcnow() + timedelta(days=7)
+        # USER SNAPSHOT
+        user_response = UserResponse(
+            id=user_id,
+            email=email,
+            is_active=is_active
         )
 
-        db.add(session)
-        await db.commit()
+        # Store session data in Redis using pipeline
+        start = time.perf_counter()
+
+        try:
+            pipe = redis_client.pipeline()
+
+            #store session -> used for authentication
+            pipe.set(
+                f"session:{hashed_access}",
+                str(user.id),
+                ex=ACCESS_TOKEN_EXPIRES_SECONDS
+            )
+            
+            #Store refresh token mapping -> used for token refresh
+            pipe.set(
+                f"refresh:{hashed_refresh_token}",
+                str(user.id),
+                ex=7 * 24 * 60 * 60
+            )
+        
+            pipe.set(
+                f"access_to_refresh:{hashed_access}",
+                hashed_refresh_token,
+                ex=ACCESS_TOKEN_EXPIRES_SECONDS
+            )
+
+            await pipe.execute()
+
+        except Exception as e:
+            # Fail fast -> avoid partial login state
+            logger.exception("Redis pipeline failed")
+            raise HTTPException(
+                status_code=500,
+                detail="Login temporarily unavailable"
+            ) from e
+        
+        log_metric("redis_set_session_ms", (time.perf_counter() - start) * 1000)
         
         # Total login timing
         log_metric('login_total_ms', (time.perf_counter() - start_total) * 1000)
