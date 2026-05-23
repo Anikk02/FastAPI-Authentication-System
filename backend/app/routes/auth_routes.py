@@ -167,7 +167,7 @@ async def login_user(
             email=email,
             name=name,
             role=role,
-            created_at=created_at
+            created_at=created_at,
             is_active=is_active
         )
 
