@@ -45,15 +45,15 @@ def mask_email(email:str)->str:
 async def register_user(
     user_data: UserRegister,
     db: AsyncSession = Depends(get_db)
-)->User:
+)->UserResponse:
     try:
         logger.info(f"Registration attempt: {mask_email(user_data.email)}")
 
         result = await safe_execute(
             db,
-            select(User).where(User.email == user_data.email)
+            select(User.id).where(User.email == user_data.email)
         )
-        existing_user = result.scalar_one_or_none()
+        existing_user = result.first()
         if existing_user:
             logger.warning(f"Registration failed: email already exists {mask_email(user_data.email)}")
             raise HTTPException(
@@ -61,21 +61,27 @@ async def register_user(
                 detail = "Email already registered"
             )
         
+        #Hash Password
+        hashed_password = await run_in_threadpool(
+            hash_password, user_data.password
+        )
+
+        #Create User
         new_user = User(
             name = user_data.name,
             email = user_data.email,
-            hashed_password= await run_in_threadpool(
-                hash_password, user_data.password
-            )
+            hashed_password=hashed_password
         )
 
         db.add(new_user)
-        await db.flush()
+        await db.flush() #get ID without full commit
         await db.refresh(new_user)
         await db.commit() #commit consistency
 
         logger.info(f"User registered successfully: user_id={new_user.id}, email={mask_email(user_data.email)}")
-        return new_user
+
+        return UserResponse.model_validate(new_user)
+    
     except HTTPException:
         raise
 
