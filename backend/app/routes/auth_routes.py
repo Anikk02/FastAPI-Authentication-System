@@ -143,14 +143,14 @@ async def login_user(
             )
         
         if not is_active:
-            logger.warning(f"Login denied: inactive user user_id={user.id}")
+            logger.warning(f"Login denied: inactive user user_id={user_id}")
             raise HTTPException(
                 status_code=403,
                 detail = "Inactive user account"
             )
         
-        access_token = create_access_token({'user_id':user.id})
-        refresh_token = create_refresh_token({'user_id':user.id})
+        access_token = create_access_token({'user_id':user_id})
+        refresh_token = create_refresh_token({'user_id':user_id})
 
         hashed_access = hash_token(access_token)
         hashed_refresh_token = hash_token(refresh_token)
@@ -178,7 +178,7 @@ async def login_user(
             #Store refresh token mapping -> used for token refresh
             pipe.set(
                 f"refresh:{hashed_refresh_token}",
-                str(user.id),
+                str(user_id),
                 ex=7 * 24 * 60 * 60
             )
         
