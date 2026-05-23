@@ -202,7 +202,7 @@ async def login_user(
         
         # Total login timing
         log_metric('login_total_ms', (time.perf_counter() - start_total) * 1000)
-        logger.info(f"User logged in successfully: user_id={user.id}")
+        logger.info(f"User logged in successfully: user_id={user_id}")
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
