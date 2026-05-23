@@ -171,7 +171,7 @@ async def login_user(
             #store session -> used for authentication
             pipe.set(
                 f"session:{hashed_access}",
-                str(user.id),
+                user_response.model_dump_json(),
                 ex=ACCESS_TOKEN_EXPIRES_SECONDS
             )
             
