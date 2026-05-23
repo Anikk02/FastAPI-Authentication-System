@@ -112,7 +112,13 @@ async def login_user(
         start = time.perf_counter()
         result = await safe_execute(
             db,
-            select(User.id, User.email, User.hashed_password, User.is_active).where(User.email == user_data.email)
+            select(User.id,
+                   User.email,
+                   User.name, 
+                   User.hashed_password, 
+                   User.is_active,
+                   User.role,
+                   User.created_at).where(User.email == user_data.email)
         )
         log_metric("db_user_lookup_ms", (time.perf_counter() - start) * 1000)
 
@@ -124,7 +130,7 @@ async def login_user(
                 detail="Invalid email or password"
             )
         
-        user_id, email, hashed_password, is_active = user
+        user_id, email, name, role, created_at, hashed_password, is_active = user
         
         # Threadpool timing
         start = time.perf_counter()
@@ -159,6 +165,9 @@ async def login_user(
         user_response = UserResponse(
             id=user_id,
             email=email,
+            name=name,
+            role=role,
+            created_at=created_at
             is_active=is_active
         )
 
@@ -316,7 +325,7 @@ async def logout(
 
             #delete from DB as well
             await db.execute(
-                delete(Session).where(Session.refresh_token_hash == refresh_token)
+                delete(Session).where(Session.refresh_token_hash == refresh_hash)
             )
             await db.commit()
         
