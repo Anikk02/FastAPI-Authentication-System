@@ -52,7 +52,7 @@ async def get_current_user(
         session_key = f"session:{hashed_token}"
 
         # redis check
-        session_valid = await redis_exists(session_key)
+        session_valid = await redis_get(session_key)
         
         #executes if redis available
         if not session_valid:
@@ -95,11 +95,11 @@ async def get_current_user(
         # 3. Convert to schema
         user_response = UserResponse.model_validate(user)
 
-        # 4. Store in Redis (TTL = 5 minutes)
+        # 4. Store in Redis (TTL = 30 minutes)
         await redis_set(
             cache_key,
             user_response.model_dump_json(),
-            ttl=300
+            ttl=1800 #30 minutes
         )
 
         return user_response
